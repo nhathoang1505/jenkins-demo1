@@ -1,0 +1,68 @@
+pipeline {
+    agent any
+    options { timestamps() }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Sửa URL đúng repo của bạn nếu khác
+                git branch: 'main', url: 'https://github.com/nhathoang1505/jenkins-demo1.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                bat '''
+                if not exist build mkdir build
+                javac -d build src\\WebServer.java
+                '''
+            }
+        }
+
+        stage('Stop previous on 8081') {
+            steps {
+                // Dừng server cũ nếu đang chiếm cổng 8081 (không lỗi nếu không có)
+                bat '''
+                for /f "tokens=5" %%a in ('netstat -ano ^| findstr :8081 ^| findstr LISTENING') do taskkill /PID %%a /F
+                exit /b 0
+                '''
+            }
+        }
+
+        stage('Deploy (start server)') {
+            steps {
+                bat '''
+                if not exist deploy mkdir deploy
+                // chạy nền, log vào deploy\\webserver.log
+                start "" /b cmd /c "java -cp build WebServer > deploy\\webserver.log 2>&1"
+                '''
+            }
+        }
+
+        stage('Verify') {
+            steps {
+                // Đợi server lên rồi kiểm tra nội dung
+                bat '''
+                timeout /t 3 > NUL
+                where curl >NUL 2>&1
+                if %ERRORLEVEL%==0 (
+                    curl -s http://localhost:8081 > deploy\\check.txt
+                ) else (
+                    powershell -Command "iwr -UseBasicParsing http://localhost:8081 | Select-Object -ExpandProperty Content" > deploy\\check.txt
+                )
+                type deploy\\check.txt
+                findstr /C:"Hello from Jenkins CI/CD" deploy\\check.txt
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ CI/CD OK — mở http://localhost:8081 để xem.'
+        }
+        failure {
+            echo '❌ Lỗi rồi — mở Console Output để xem chi tiết.'
+        }
+    }
+}
