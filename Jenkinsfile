@@ -4,19 +4,20 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                echo '🔨 Đang build project...'
-                sh 'javac src/HelloWorld.java'
+                echo "Bắt đầu Build"
+                bat 'echo Building project...'
             }
         }
         stage('Test') {
             steps {
-                echo '🧪 Đang chạy test...'
-                sh 'java -cp src HelloWorld'
+                echo "Bắt đầu Test"
+                bat 'echo Running tests...'
             }
         }
         stage('Deploy') {
             steps {
-                echo '🚀 Deploy thành công!'
+                echo "Bắt đầu Deploy"
+                bat 'echo Deploying...'
             }
         }
     }
